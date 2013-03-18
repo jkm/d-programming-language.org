@@ -1,0 +1,256 @@
+Ddoc
+
+$(D_S D Programming Language $(VER),
+
+$(P Deimos is a collection of repositories for interfacing C libraries. Its aim
+is to integrate existing C libraries. Since D is binary compatible with C ABI
+code, this makes a wealth of existing functionality available in D with limited
+effort. Deimos repositories are available at $(LINK2
+https://github.com/D-Programming-Deimos, github).)
+
+$(H2 How to use a Deimos repository)
+
+$(P Each Deimos repository is named after the corresponding C library. Each must
+follow the directory structure,)
+
+---
+C/          // contains the original C header files
+deimos/     // contains the translated D modules
+examples/   // contains examples
+README      //
+---
+
+$(P Each library should contain a $(TT README) in the root folder. The $(TT
+README) file should contain exact source and version of the C library.
+Furthermore it should contain specific notes about the usage of the D import
+file.)
+
+$(P Every library should contain a simple D example. This could be used for
+basic self testing.)
+
+$(P To use a Deimos library you need to clone/submodule its repository. Adjust the
+import path and link/load the C library.
+E.g. to use OpenSSL execute)
+
+---
+git clone git://github.com/D-Programming-Deimos/openssl.git
+dmd -Iopenssl/ -lssl ...
+---
+
+$(H2 How to create a Deimos repository)
+
+$(P Deimos is constantly growing but having more libraries at your finger tips
+is always an improvement. Let's walk through the basic steps of creating a
+Deimos repository.)
+
+$(OL
+
+$(LI Initialize the repository)
+
+---
+git init
+touch README.md
+git add README.md
+git commit
+---
+
+$(LI Add the plain C header files in branch C)
+
+---
+git checkout -b C
+mkdir C/
+cp -a path/to/include/files/* C/
+git add C/
+git commit
+---
+
+$(LI Merge branch C and copy C header files to deimos/)
+
+---
+git checkout master
+git merge C
+cp -a C/ deimos/
+git commit
+---
+
+$(P For each file a proper module declaration has to be provided. That is, you have
+to specify a fully qualified module name (see $(DDSUBLINK module,
+ModuleDeclaration, Module)). The fully qualified module name has to start with
+$(TT deimos.). In addition
+
+$(UL
+$(LI each slash ($(TT /)) has to be replaced by a dot ($(TT .)))
+$(LI each dash ($(TT -)) has to be replaced by a dot ($(TT .)))
+$(LI each D keyword gets a underscore ($(TT _)) appended)
+)
+
+E.g. the header file $(TT llvm-c/Analysis.h) will get the module name $(TT
+deimos.llvm.c.Analysis) and $(TT foo/bar/if.h) will get the module name $(TT
+deimos.foo.bar.if_.))
+
+$(P Once the D module name is fixed the C header file should be moved using git
+mv where the new file name follows the chosen module name (see
+$(DDSUBLINK module, ModuleDeclaration, Module)). E.g. the module $(TT
+llvm.c.Analysis) is in the package $(TT c), which itself is a package of $(TT
+llvm) which means $(TT llvm-c/Analysis.h) will be moved to $(TT
+deimos/llvm/c/Analysis.d). Note, that if the module name contains dots (i.e.
+the module is part of a package) a hierarchy of directories has to be created.)
+
+$(P Once all header files are moved make a commit. This commit only reflects the
+renaming and allows git to track the renaming of each file. Never rename a file
+and change its content as this will destroy git's ability to track a moved
+file.)
+
+$(LI Changing the contents of each module)
+
+$(P So far, each C header file was renamed to a D module. Next the contents of
+each module will be adjusted. In general following the advices from
+$(DDLINK interfaceToC, , interfacing to c) is recommended.)
+
+$(P The D files should try to do as least modifications as possible to simplify
+updates of the C headers. This includes leaving comments intact. The copyright
+for the D files should match the one being used by the C header as they are
+derived work.)
+
+$(P In particular,
+
+$(UL
+$(LI Replace C $(TT include))
+
+$(P Each $(TT #include &lt;path/to/header.h&gt;) needs to have at most one
+corresponding $(TT import path.to.header;). Usually there is exactly one
+corresponding module in $(TT core.stdc).
+
+E.g.,
+
+---
+#include <stdbool.h>  // can be removed since D's bool is compatible with C's
+#include <wchar.h>    // core.stdc.wchar_
+#include <stdarg.h>   // core.stdc.stdarg
+
+#include <inttypes.h> // core.stdc.inttypes
+#include <stdint.h>   // core.stdc.stdint
+#include <complex.h>  // core.stdc.complex
+---
+
+If there are system specific headers (Posix, Windows, OS X, etc.) included,
+search the package $(TT core.sys) for an appropriate replacement.)
+
+$(LI Add $(TT extern(C)) and $(TT nothrow))
+
+$(P To instruct the compiler to use the C linkage add $(TT extern(C)). Further,
+since C has no exceptions adding $(TT nothrow) is recommended.)
+
+---
+// imports
+
+extern(C) nothrow:
+
+// contents
+---
+
+$(LI Replacing types)
+
+$(P Types are replaced according to $(DDLINK interfaceToC, , interfacing to c)
+(see table "Data Type Compatibility").
+
+E.g.,
+$(UL
+
+$(LI $(TT signed char) becomes $(TT byte).)
+$(LI $(TT unsigned char) becomes $(TT ubyte).)
+$(LI $(TT unsigned) becomes $(TT uint).)
+$(LI $(TT long) becomes $(TT core.stdc.config.c_long).)
+$(LI $(TT long double) becomes $(TT real).)
+$(LI $(TT T(*)(params)) becomes $(TT T function(params)).)
+)
+
+Further, $(TT const T*) must be replaced by $(TT const(T)*) for any $(TT T).)
+
+$(LI Versioning)
+
+$(P C versioning macros should be translated, as close as possible, to
+$(DDSUBLINK version, PredefinedVersions, predefined version identifiers).
+
+E.g.
+
+---
+#ifdef __WIN32__
+#else
+#enddef
+---
+
+is translated to
+
+---
+version(Win32)
+{
+}
+else
+{
+{
+---
+
+)
+
+$(LI Replacing macros)
+
+$(P Translated header should not require linkage of any D binary. Necessary D
+functions can be written as nullary templates.)
+
+$(TT #define GET(x) x.value) is replaced by $(TT int GET()(X x) { return
+x.value; }).
+
+)
+)
+
+$(DDOC_COMMENT
+$(LI Tag with library version))
+
+)
+
+$(P We strongly recommend to follow these guidelines to warrant inclusion in
+Deimos. However, deviation may be necessary in some cases.)
+
+$(P To push the repository upstream a repository has to be created at $(LINK2
+https://github.com/D-Programming-Deimos, github). Ask for such in $(LINK2
+http://forum.dlang.org/group/digitalmars.D, digitalmars.D). Finally, create a
+pull request.)
+
+$(H2 How to update an existing Deimos repository)
+
+$(P
+
+Checkout the branch C
+
+---
+git checkout C
+copy the header files
+---
+
+Merge the branch C and fix conflicts.
+
+---
+git checkout master
+git merge C
+// fix conflicts and adjust as explained above
+git commit
+---
+$(DDOC_COMMENT git tag)
+
+)
+
+$(P References:)
+
+$(UL
+$(LI $(LINK2 http://wiki.dlang.org/DIP12, DIP12))
+$(LI $(LINK2 https://github.com/jpf91/systemd/wiki/Deimos-git-branch-structure, Git setup for
+Deimos))
+)
+
+)
+
+Macros:
+	TITLE=Deimos
+	WIKI=Deimos
+    HTMLTAG=<$1>$+</$1>

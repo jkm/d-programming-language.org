@@ -330,7 +330,7 @@ $(H2 $(LNAME2 Using C Libraries, Using Existing C Libraries))
 	)
 
 	$(P For popular C libraries, the first place to look for the corresponding
-	D interface file is the $(XLINK2 https://github.com/D-Programming-Deimos/, Deimos Project).
+	D interface file is the $(DDLINK deimos, , Deimos).
 	If it isn't there already, and you write one, please contribute it
 	to the Deimos Project.
 	)
