@@ -34,7 +34,7 @@ E.g. to use OpenSSL execute)
 
 ---
 git clone git://github.com/D-Programming-Deimos/openssl.git
-dmd -Iopenssl/ -lssl ...
+dmd -Iopenssl/ -L-lssl ...
 ---
 
 $(H2 How to create a Deimos repository)
