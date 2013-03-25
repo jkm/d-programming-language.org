@@ -132,7 +132,7 @@ function bodyLoad()
 <div id="content" class='hyphenate'>
   
 <div id="tools">
-	<!--span id="lastupdate">Last update Sat Mar 23 10:49:49 2013
+	<!--span id="lastupdate">Last update Mon Apr  8 00:43:21 2013
 </span-->
 	<a href="https://github.com/jkm/d-programming-language.org/edit/master/deimos.dd" class="tip button">
 		Improve this page
@@ -214,19 +214,21 @@ git commit
 </span></pre>
 
 <p>For each file a proper module declaration has to be provided. That is, you have
-to specify a fully qualified module name (see <a href="module.html#ModuleDeclaration">Module</a>). The fully qualified module name has to start with
-<tt>deimos.</tt>. In addition
+to specify a fully qualified module name
+(see <a href="module.html#ModuleDeclaration">Module</a>). The fully qualified module
+name has to start with <tt>deimos.</tt>. In addition
 
 <ul><li>each slash (<tt>/</tt>) has to be replaced by a dot (<tt>.</tt>)</li>
 <li>each dash (<tt>-</tt>) has to be replaced by a dot (<tt>.</tt>)</li>
 <li>each D keyword gets a underscore (<tt>_</tt>) appended</li>
+<li>module and package names must be lower case</li>
 </ul>
 
-E.g. the header file <tt>llvm-c/Analysis.h</tt> will get the module name <tt>deimos.llvm.c.Analysis</tt> and <tt>foo/bar/if.h</tt> will get the module name <tt>deimos.foo.bar.if_.</tt></p>
+E.g. the header file <tt>llvm-c/Analysis.h</tt> will get the module name <tt>deimos.llvm.c.analysis</tt> and <tt>foo/bar/if.h</tt> will get the module name <tt>deimos.foo.bar.if_.</tt></p>
 
 <p>Once the D module name is fixed the C header file should be moved using git
 mv where the new file name follows the chosen module name (see
-<a href="module.html#ModuleDeclaration">Module</a>). E.g. the module <tt>llvm.c.Analysis</tt> is in the package <tt>c</tt>, which itself is a package of <tt>llvm</tt> which means <tt>llvm-c/Analysis.h</tt> will be moved to <tt>deimos/llvm/c/Analysis.d</tt>. Note, that if the module name contains dots (i.e.
+<a href="module.html#ModuleDeclaration">Module</a>). E.g. the module <tt>llvm.c.analysis</tt> is in the package <tt>c</tt>, which itself is a package of <tt>llvm</tt> which means <tt>llvm-c/Analysis.h</tt> will be moved to <tt>deimos/llvm/c/analysis.d</tt>. Note, that if the module name contains dots (i.e.
 the module is part of a package) a hierarchy of directories has to be created.</p>
 
 <p>Once all header files are moved make a commit. This commit only reflects the
@@ -249,9 +251,13 @@ derived work.</p>
 
 <ul><li>Replace C <tt>include</tt></li>
 
-<p>Each <tt>#include &lt;path/to/header.h&gt;</tt> needs to have at most one
-corresponding <tt>import path.to.header;</tt>. Usually there is exactly one
-corresponding module in <tt>core.stdc</tt>.
+<p>A C include like <tt>#include &lt;path/to/header.h&gt;</tt> needs to be
+replaced by <tt>import path.to.header;</tt> (see <a href="module.html#ImportDeclaration">D import statement</a>) or removed.</p>
+
+<p>Public imports should be avoided as much as possible. This might result in
+additional imports are needed, without any corresponding C include.</p>
+
+<p>For C headers there is usually exactly one corresponding module in <tt>core.stdc</tt>.
 
 E.g.,
 
@@ -265,7 +271,9 @@ E.g.,
 </span></span></pre>
 
 If there are system specific headers (Posix, Windows, OS X, etc.) included,
-search the package <tt>core.sys</tt> for an appropriate replacement.</p>
+search the package <tt>core.sys</tt> for an appropriate replacement.
+
+</p>
 
 <li>Add <tt>extern(C)</tt> and <tt>nothrow</tt></li>
 
@@ -278,6 +286,33 @@ since C has no exceptions adding <tt>nothrow</tt> is recommended.</p>
 
 <span class="d_comment">// contents
 </span></span></pre>
+
+<li>Global variables</li>
+
+<p>Global variables in C are not local to the thread as they are in D (see
+<a href="migrate-to-shared.html">migrating to shared</a> and <a href="interfaceToC.html#C Globals">C globals</a>).
+That's why each global variable needs <tt>__gshared</tt> prepended.
+
+<pre class="d_code"><span class="notranslate"><span class="d_keyword">int</span> a;
+</span></pre>
+
+is translated to
+
+<pre class="d_code"><span class="notranslate"><span class="d_keyword">extern</span> <span class="d_keyword">__gshared</span> <span class="d_keyword">int</span> a;
+</span></pre>
+
+If the variable is declared with <tt>static</tt> add the <a href="attribute.html#ProtectionAttribute">private protection</a> to ensure that the variable is only
+visible within the module.
+
+<pre class="d_code"><span class="notranslate"><span class="d_keyword">static</span> <span class="d_keyword">int</span> a;
+</span></pre>
+
+is translated to
+
+<pre class="d_code"><span class="notranslate"><span class="d_keyword">private</span> <span class="d_keyword">extern</span> <span class="d_keyword">__gshared</span> <span class="d_keyword">int</span> a;
+</span></pre>
+
+</p>
 
 <li>Replacing types</li>
 
@@ -295,6 +330,51 @@ E.g.,
 
 Further, <tt>const T*</tt> must be replaced by <tt>const(T)*</tt> for any <tt>T</tt>.</p>
 
+<li>Replacing typedef with alias</li>
+
+<p>The equivalent of C's typedef is <a href="declaration.html#alias">alias</a> in
+D. Code like
+
+<pre class="d_code"><span class="notranslate"><span class="d_keyword">typedef</span> Int <span class="d_keyword">int</span>;
+</span></pre>
+
+is replaced by
+
+<pre class="d_code"><span class="notranslate"><span class="d_keyword">alias</span> Int <span class="d_keyword">int</span>;
+</span></pre>
+
+</p>
+
+<li>Enumerated types</li>
+
+<p>In D a <a href="enum.html#EnumDeclaration">named enum</a> has scoped enum
+members contrary to C's enum. To adjust replace code like
+
+<pre class="d_code"><span class="notranslate"><span class="d_keyword">enum</span> Day { monday, tuesday, wednesday, thursday, friday, saturday, sunday };
+<span class="d_keyword">enum</span> Day day = monday;
+</span></pre>
+
+by
+
+<pre class="d_code"><span class="notranslate"><span class="d_keyword">enum</span> Day { monday, tuesday, wednesday, thursday, friday, saturday, sunday };
+<span class="d_keyword">enum</span> Day day = Day.monday;
+</span></pre>
+
+</p>
+
+<p>In C enumerated types are of type <tt>int</tt> only. Respectively, code like
+
+<pre class="d_code"><span class="notranslate"><span class="d_keyword">typedef</span> <span class="d_keyword">enum</span> { monday, tuesday, wednesday, thursday, friday, saturday, sunday } Day;
+</span></pre>
+
+is replaced by
+
+<pre class="d_code"><span class="notranslate"><span class="d_keyword">alias</span> <span class="d_keyword">int</span> Day;
+<span class="d_keyword">enum</span> : Day { monday, tuesday, wednesday, thursday, friday, saturday, sunday };
+</span></pre>
+
+</p>
+
 <li>Versioning</li>
 
 <p>C versioning macros should be translated, as close as possible, to
@@ -304,7 +384,7 @@ E.g.
 
 <pre class="d_code"><span class="notranslate">#ifdef __WIN32__
 #else
-#enddef
+#endif
 </span></pre>
 
 is translated to
@@ -314,7 +394,7 @@ is translated to
 }
 <span class="d_keyword">else</span>
 {
-{
+}
 </span></pre>
 
 </p>
@@ -327,10 +407,19 @@ functions can be written as nullary templates.</p>
 <tt>#define GET(x) x.value</tt> is replaced by <tt>int GET()(X x) { return
 x.value; }</tt>.
 
+<p>When translating C macros, <a href="function.html#interpretation">CTFE</a> and <a href="expression.html#ImportExpression">import expression</a> can be of
+help.</p>
+
 </ul>
 </p>
 
-<!--<li>Tag with library version</li>-->
+<li>Tag with library version</li>
+
+<p>Tag the commit of the finished translation using the <b>same version string
+as used by the C library</b>.</p>
+
+<pre class="d_code"><span class="notranslate">git tag 3.1 &lt;commit&gt;
+</span></pre>
 
 </ol>
 
@@ -339,6 +428,13 @@ Deimos. However, deviation may be necessary in some cases.</p>
 
 <p>To push the repository upstream a repository has to be created at <a href="https://github.com/D-Programming-Deimos">github</a>. Ask for such in <a href="http://forum.dlang.org/group/digitalmars.D">digitalmars.D</a>. Finally, create a
 pull request.</p>
+
+<h2>Handling multiple versions</h2>
+
+<p>When translating multiple versions of a C library each translation must be
+tagged with its appropriate version. Each version should have its own branch to
+ease updating/fixing a translation. The master branch is the translation of the
+latest version.</p>
 
 <h2>How to update an existing Deimos repository</h2>
 
@@ -354,8 +450,8 @@ Merge the branch C and fix conflicts.
 git merge C
 <span class="d_comment">// fix conflicts and adjust as explained above
 </span>git commit
+git tag -f &lt;old_tag&gt;
 </span></pre>
-<!--git tag-->
 
 </p>
 
@@ -395,7 +491,7 @@ Deimos</a></li>
 <div id="copyright">
 
 Copyright &copy; 1999-2013 by Digital Mars &reg;, All Rights Reserved |
-Page generated by <a href="ddoc.html">Ddoc</a> on Sat Mar 23 10:49:49 2013
+Page generated by <a href="ddoc.html">Ddoc</a> on Mon Apr  8 00:43:21 2013
 
 </div>
 </body>
