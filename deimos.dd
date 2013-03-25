@@ -74,9 +74,9 @@ git commit
 ---
 
 $(P For each file a proper module declaration has to be provided. That is, you have
-to specify a fully qualified module name (see $(DDSUBLINK module,
-ModuleDeclaration, Module)). The fully qualified module name has to start with
-$(TT deimos.). In addition
+to specify a fully qualified module name
+(see $(DDSUBLINK module, ModuleDeclaration, Module)). The fully qualified module
+name has to start with $(TT deimos.). In addition
 
 $(UL
 $(LI each slash ($(TT /)) has to be replaced by a dot ($(TT .)))
@@ -117,9 +117,15 @@ $(P In particular,
 $(UL
 $(LI Replace C $(TT include))
 
-$(P Each $(TT #include &lt;path/to/header.h&gt;) needs to have at most one
-corresponding $(TT import path.to.header;). Usually there is exactly one
-corresponding module in $(TT core.stdc).
+$(P A C include like $(TT #include &lt;path/to/header.h&gt;) needs to be
+replaced by $(TT import path.to.header;) (see $(DDSUBLINK module,
+ImportDeclaration, D import statement)) or removed.)
+
+$(P Public imports should be avoided as much as possible. This might result in
+additional imports are needed, without any corresponding C include.)
+
+$(P For C headers there is usually exactly one corresponding module in $(TT
+core.stdc).
 
 E.g.,
 
@@ -134,7 +140,9 @@ E.g.,
 ---
 
 If there are system specific headers (Posix, Windows, OS X, etc.) included,
-search the package $(TT core.sys) for an appropriate replacement.)
+search the package $(TT core.sys) for an appropriate replacement.
+
+)
 
 $(LI Add $(TT extern(C)) and $(TT nothrow))
 
@@ -148,6 +156,39 @@ extern(C) nothrow:
 
 // contents
 ---
+
+$(LI Global variables)
+
+$(P Global variables in C are not local to the thread as they are in D (see
+$(DDLINK migrate-to-shared, , migrating to shared) and $(DDSUBLINK
+interfaceToC, C Globals, C globals)).
+That's why each global variable needs $(TT __gshared) prepended.
+
+---
+int a;
+---
+
+is translated to
+
+---
+extern __gshared int a;
+---
+
+If the variable is declared with $(TT static) add the $(DDSUBLINK attribute,
+ProtectionAttribute, private protection) to ensure that the variable is only
+visible within the module.
+
+---
+static int a;
+---
+
+is translated to
+
+---
+private extern __gshared int a;
+---
+
+)
 
 $(LI Replacing types)
 
@@ -177,7 +218,7 @@ E.g.
 ---
 #ifdef __WIN32__
 #else
-#enddef
+#endif
 ---
 
 is translated to
@@ -188,7 +229,7 @@ version(Win32)
 }
 else
 {
-{
+}
 ---
 
 )
@@ -200,6 +241,10 @@ functions can be written as nullary templates.)
 
 $(TT #define GET(x) x.value) is replaced by $(TT int GET()(X x) { return
 x.value; }).
+
+$(P When translating C macros, $(DDSUBLINK function, interpretation,
+CTFE) and $(DDSUBLINK expression, ImportExpression, import expression) can be of
+help.)
 
 )
 )
