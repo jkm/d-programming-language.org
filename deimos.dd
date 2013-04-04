@@ -82,18 +82,19 @@ $(UL
 $(LI each slash ($(TT /)) has to be replaced by a dot ($(TT .)))
 $(LI each dash ($(TT -)) has to be replaced by a dot ($(TT .)))
 $(LI each D keyword gets a underscore ($(TT _)) appended)
+$(LI module and package names must be lower case)
 )
 
 E.g. the header file $(TT llvm-c/Analysis.h) will get the module name $(TT
-deimos.llvm.c.Analysis) and $(TT foo/bar/if.h) will get the module name $(TT
+deimos.llvm.c.analysis) and $(TT foo/bar/if.h) will get the module name $(TT
 deimos.foo.bar.if_.))
 
 $(P Once the D module name is fixed the C header file should be moved using git
 mv where the new file name follows the chosen module name (see
 $(DDSUBLINK module, ModuleDeclaration, Module)). E.g. the module $(TT
-llvm.c.Analysis) is in the package $(TT c), which itself is a package of $(TT
+llvm.c.analysis) is in the package $(TT c), which itself is a package of $(TT
 llvm) which means $(TT llvm-c/Analysis.h) will be moved to $(TT
-deimos/llvm/c/Analysis.d). Note, that if the module name contains dots (i.e.
+deimos/llvm/c/analysis.d). Note, that if the module name contains dots (i.e.
 the module is part of a package) a hierarchy of directories has to be created.)
 
 $(P Once all header files are moved make a commit. This commit only reflects the
