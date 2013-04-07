@@ -209,6 +209,57 @@ $(LI $(TT T(*)(params)) becomes $(TT T function(params)).)
 
 Further, $(TT const T*) must be replaced by $(TT const(T)*) for any $(TT T).)
 
+$(LI Replacing typedef with alias)
+
+$(P The equivalent of C's typedef is $(DDSUBLINK declaration, alias, alias) in
+D. Code like
+
+---
+typedef Int int;
+---
+
+is replaced by
+
+---
+alias Int int;
+---
+
+)
+
+$(LI Enumerated types)
+
+$(P In D a $(DDSUBLINK enum, EnumDeclaration, named enum) has scoped enum
+members contrary to C's enum. To adjust replace code like
+
+---
+enum Day { monday, tuesday, wednesday, thursday, friday, saturday, sunday };
+enum Day day = monday;
+---
+
+by
+
+---
+enum Day { monday, tuesday, wednesday, thursday, friday, saturday, sunday };
+enum Day day = Day.monday;
+---
+
+)
+
+$(P In C enumerated types are of type $(TT int) only. Respectively, code like
+
+---
+typedef enum { monday, tuesday, wednesday, thursday, friday, saturday, sunday } Day;
+---
+
+is replaced by
+
+---
+alias int Day;
+enum : Day { monday, tuesday, wednesday, thursday, friday, saturday, sunday };
+---
+
+)
+
 $(LI Versioning)
 
 $(P C versioning macros should be translated, as close as possible, to
