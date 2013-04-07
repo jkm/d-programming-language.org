@@ -301,8 +301,14 @@ help.)
 )
 )
 
-$(DDOC_COMMENT
-$(LI Tag with library version))
+$(LI Tag with library version)
+
+$(P Tag the commit of the finished translation using the $(B same version string
+as used by the C library).)
+
+---
+git tag 3.1 <commit>
+---
 
 )
 
@@ -313,6 +319,13 @@ $(P To push the repository upstream a repository has to be created at $(LINK2
 https://github.com/D-Programming-Deimos, github). Ask for such in $(LINK2
 http://forum.dlang.org/group/digitalmars.D, digitalmars.D). Finally, create a
 pull request.)
+
+$(H2 Handling multiple versions)
+
+$(P When translating multiple versions of a C library each translation must be
+tagged with its appropriate version. Each version should have its own branch to
+ease updating/fixing a translation. The master branch is the translation of the
+latest version.)
 
 $(H2 How to update an existing Deimos repository)
 
@@ -332,8 +345,8 @@ git checkout master
 git merge C
 // fix conflicts and adjust as explained above
 git commit
+git tag -f <old_tag>
 ---
-$(DDOC_COMMENT git tag)
 
 )
 
